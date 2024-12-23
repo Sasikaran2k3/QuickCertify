@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Firebase Authentication</title>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/9.0.2/firebase-firestore.js"
+    ></script>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --bg-dark: #111827;
+        --bg-darker: #0f172a;
+        --text-light: #f3f4f6;
+        --text-gray: #9ca3af;
+        --border-color: #374151;
+        --card-bg: #1f2937;
+      }
+
+      body {
+        font-family: "Inter", system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-dark);
+        color: var(--text-light);
+        margin: 0;
+        padding: 20px;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .login-container {
+        max-width: 400px;
+        background-color: var(--card-bg);
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1),
+          0 2px 4px -2px rgb(0 0 0 / 0.1);
+        text-align: center;
+      }
+
+      h2 {
+        color: var(--text-light);
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      input[type="email"],
+      input[type="password"] {
+        background-color: var(--bg-darker);
+        border: 1px solid var(--border-color);
+        color: var(--text-light);
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        width: 90%;
+        margin-bottom: 1rem;
+        transition: border-color 0.3s ease;
+      }
+
+      input[type="email"]:hover,
+      input[type="password"]:hover {
+        border-color: var(--primary);
+      }
+
+      button {
+        background-color: var(--primary);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        width: 100%;
+      }
+
+      button:hover {
+        background-color: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      button:disabled {
+        background-color: var(--text-gray);
+        color: var(--bg-darker);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .icon {
+        width: 20px;
+        height: 20px;
+        fill: white;
+      }
+
+      #error-message {
+        color: red;
+        margin-bottom: 10px;
+      }
+
+      .icon-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="login-container">
+      <h2>Login to Generate Certificates</h2>
+      <div id="error-message"></div>
+
+      <input type="email" id="email" placeholder="Email" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <button id="login-email-btn" disabled>Login with Email</button>
+      <button id="signup-email-btn" disabled>Sign Up with Email</button>
+      <button id="google-login-btn">Login with Google</button>
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js";
+      import {
+        getAuth,
+        signInWithEmailAndPassword,
+        createUserWithEmailAndPassword,
+        GoogleAuthProvider,
+        signInWithPopup,
+      } from "https://www.gstatic.com/firebasejs/9.0.2/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        setDoc,
+        getDoc,
+      } from "https://www.gstatic.com/firebasejs/9.0.2/firebase-firestore.js";
+      const config = {
+        apiKey: "AIzaSyBvqGccwG3RIagj2dgLYod3UYnchOh9KVU",
+        authDomain: "certificate-generator-b3462.firebaseapp.com",
+        projectId: "certificate-generator-b3462",
+        storageBucket: "certificate-generator-b3462.firebasestorage.app",
+        messagingSenderId: "1051096816147",
+        appId: "1:1051096816147:web:43acdb00f6f25902c9fde6",
+        measurementId: "G-H9LS8TNJ6J",
+      };
+      const app = initializeApp(config);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      const emailInput = document.getElementById("email");
+      const passwordInput = document.getElementById("password");
+      const errorMessageEl = document.getElementById("error-message");
+      const loginEmailBtn = document.getElementById("login-email-btn");
+      const signupEmailBtn = document.getElementById("signup-email-btn");
+      const googleLoginBtn = document.getElementById("google-login-btn");
+
+      async function saveUserToDatabase(user) {
+        try {
+          await setDoc(doc(db, "users", user.uid), {
+            email: user.email,
+            certificates: 0,
+          });
+          console.log("User data saved to database.");
+        } catch (error) {
+          console.error("Error saving user to database:", error);
+        }
+      }
+
+      loginEmailBtn.addEventListener("click", async () => {
+        try {
+          const userCredential = await signInWithEmailAndPassword(
+            auth,
+            emailInput.value,
+            passwordInput.value
+          );
+          errorMessageEl.textContent = "Login Successful!";
+          console.log("Logged in user:", userCredential.user);
+        } catch (error) {
+          errorMessageEl.textContent = error.message;
+        }
+      });
+
+      signupEmailBtn.addEventListener("click", async () => {
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            emailInput.value,
+            passwordInput.value
+          );
+          errorMessageEl.textContent = "Account Created Successfully!";
+          await saveUserToDatabase(userCredential.user);
+          console.log("Created user:", userCredential.user);
+        } catch (error) {
+          errorMessageEl.textContent = error.message;
+          console.log("Not Recorded");
+        }
+      });
+
+      googleLoginBtn.addEventListener("click", async () => {
+        const provider = new GoogleAuthProvider();
+        try {
+          const result = await signInWithPopup(auth, provider);
+          errorMessageEl.textContent = "Google Login Successful!";
+          const userRef = doc(db, "users", result.user.uid);
+          const docSnap = await getDoc(userRef);
+          if (!docSnap.exists()) {
+            await saveUserToDatabase(result.user);
+          }
+          console.log("Google user:", result.user);
+        } catch (error) {
+          errorMessageEl.textContent = error.message;
+        }
+      });
+
+      auth.onAuthStateChanged(async (user) => {
+        if (user) {
+          console.log("User is signed in:", user);
+          window.location.href =
+            "https://sasikaran2k3.github.io/CertificateGeneratorFrontEnd/index.html";
+        } else {
+          console.log("No user is signed in.");
+        }
+      });
+      // fetch('https://certificategeneratorserver.onrender.com/firebase-config')
+      //   .then(response => response.json())
+      //   .then(data => {
+
+      //   })
+      //   .catch(error => {
+      //     console.error('Error fetching Firebase config:', error);
+      //   });
+    </script>
+  </body>
+</html>
