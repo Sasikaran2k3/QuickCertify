@@ -1,4 +1,3 @@
-
 let template = null;
 let data = null;
 let textBoxes = [];
@@ -9,10 +8,15 @@ let currentTextBox = null;
 let currentHandle = null;
 let startX, startY, originalX, originalY, originalWidth, originalHeight;
 let currentStep = 1;
-let isSingleMode = false;
+let isSingleMode = null;
 
 function nextStep() {
-    if (isSingleMode) {
+    if(currentStep == 1 && template == null)
+    {
+    alert('Please select a valid template image before proceeding.');
+    return;
+    }
+    else if (isSingleMode) {
         document.getElementById(`step${currentStep}`).classList.remove('active');
         currentStep++;
         if (currentStep === 4) {
@@ -56,6 +60,7 @@ document.getElementById('templateUpload').addEventListener('change', function(e)
             const img = new Image();
             img.onload = function() {
                 template = img;
+                enableNextButton()
                 initCanvas();
             };
             img.src = event.target.result;
@@ -416,18 +421,21 @@ document.getElementsByClassName("count")[0].setAttribute('data-value', '1');
     nextStep();
 }
 
+function enableNextButton(){
+    console.log(template);
+    document.getElementById('nextStepBtn').disabled = template!=null && isSingleMode!=null?false:true;
+}
+
 function showSingleForm() {
     isSingleMode = true;
-    document.getElementById('nextStepBtn').disabled = false;
-
+    enableNextButton()
     // document.getElementById("single-form").style.display = "block";
     // document.getElementById("bulk-form").style.display = "none";
 }
 
 function showBulkForm() {
     isSingleMode = false;
-    document.getElementById('nextStepBtn').disabled = false;
-
+    enableNextButton()
     // document.getElementById("bulk-form").style.display = "block";
     // document.getElementById("single-form").style.display = "none";
 }
