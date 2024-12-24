@@ -220,11 +220,6 @@
         try {
           const result = await signInWithPopup(auth, provider);
           errorMessageEl.textContent = "Google Login Successful!";
-          const userRef = doc(db, "users", result.user.uid);
-          const docSnap = await getDoc(userRef);
-          if (!docSnap.exists()) {
-            await saveUserToDatabase(result.user);
-          }
           console.log("Google user:", result.user);
         } catch (error) {
           errorMessageEl.textContent = error.message;
@@ -234,6 +229,11 @@
       auth.onAuthStateChanged(async (user) => {
         if (user) {
           console.log("User is signed in:", user);
+          const userRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(userRef);
+          if (!docSnap.exists()) {
+            await saveUserToDatabase(user);
+          }
           window.location.href =
             "https://sasikaran2k3.github.io/QuickCertify/index.html";
         } else {
